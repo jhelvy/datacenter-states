@@ -9,9 +9,6 @@ resources:
   - data/processed/datacenters.json
 ---
 
-Select one or more data centers to see how their combined power draw
-compares to the states.
-
 ```{ojs}
 statesGeo = FileAttachment("data/processed/us_states.geojson").json()
 statePower = FileAttachment("data/processed/state_power.csv").csv({typed: true})
@@ -31,9 +28,35 @@ powerSourceColor = d3.scaleOrdinal()
   .range(["#4C78A8", "#E45756", "#F58518", "#72B7B2"])
 
 stateAvgGwByAbbr = new Map(statePower.map(s => [s.state, s.avg_gw]))
+
+// States ordered biggest-first and smallest-first; both matching strategies
+// and the rank readout work off these.
+rankedStates = [...statePower].sort((a, b) => d3.descending(a.avg_gw, b.avg_gw))
+smallestStates = [...statePower].sort((a, b) => d3.ascending(a.avg_gw, b.avg_gw))
+
+usTotalGW = d3.sum(statePower, s => s.avg_gw)
 ```
 
-### 1. Select data center(s)
+:::: {.dash}
+
+::: {.dash-side}
+
+#### Data centers
+
+```{ojs}
+// Drive the checkbox view directly, then fire the event `viewof` listens for.
+selectionButtons = {
+  const setTo = names => {
+    viewof selectedNames.value = names;
+    viewof selectedNames.dispatchEvent(new Event("input"));
+  };
+  const all = html`<button class="dc-btn" type="button">Select all</button>`;
+  const none = html`<button class="dc-btn" type="button">Clear</button>`;
+  all.onclick = () => setTo(datacenters.map(d => d.name));
+  none.onclick = () => setTo([]);
+  return html`<div class="dc-btn-row">${all}${none}</div>`;
+}
+```
 
 ```{ojs}
 viewof selectedNames = Inputs.checkbox(
@@ -42,10 +65,10 @@ viewof selectedNames = Inputs.checkbox(
     value: [datacenters[0].name],
     format: name => {
       const d = datacenters.find(dc => dc.name === name);
-      return html`<span>
-        <strong>${d.name}</strong>
-        <span class="dc-meta"> — ${d.state}, ${d.capacity_gw.toFixed(2)} GW,
-        ${powerSourceLabels[d.power_source]}, ${d.status.replace(/_/g, " ")}</span>
+      return html`<span class="dc-option">
+        <span class="dc-option-name">${d.name}</span>
+        <span class="dc-meta">${d.capacity_gw.toFixed(2)} GW · ${d.state} ·
+        ${powerSourceLabels[d.power_source]} · ${d.status.replace(/_/g, " ")}</span>
       </span>`;
     }
   }
@@ -57,22 +80,35 @@ selected = datacenters.filter(d => selectedNames.includes(d.name))
 targetGW = d3.sum(selected, d => d.capacity_gw)
 ```
 
-### 2. Choose a state-matching strategy
+#### Matching strategy
 
 ```{ojs}
 viewof matchMode = Inputs.radio(
   new Map([
-    ["Biggest states first", "biggest"],
-    ["Closest total match", "closest"]
+    ["Fewest whole states", "smallest"],
+    ["Closest numeric match", "closest"]
   ]),
-  { value: "biggest" }
+  { value: "smallest" }
 )
 ```
 
 ```{ojs}
-rankedStates = [...statePower].sort((a, b) => d3.descending(a.avg_gw, b.avg_gw))
+strategyNote = html`<p class="strategy-note">${
+  matchMode === "smallest"
+    ? "Adds up whole states starting from the smallest electricity consumer until their combined average load reaches the selected capacity."
+    : "Searches every combination of states for the subset whose combined average load lands closest to the selected capacity."
+}</p>`
+```
 
-function biggestFirstMatch(states, target) {
+:::
+
+::: {.dash-main}
+
+```{ojs}
+// Accumulate states from the smallest consumer upward until the running total
+// reaches the target. Deterministic, monotonic in the target, and always
+// highlights a large set of states.
+function smallestFirstMatch(states, target) {
   const chosen = [];
   let cum = 0;
   for (const s of states) {
@@ -127,36 +163,66 @@ function closestMatch(states, target) {
 
 match = selected.length === 0
   ? { states: [], total: 0 }
-  : matchMode === "biggest"
-    ? biggestFirstMatch(rankedStates, targetGW)
+  : matchMode === "smallest"
+    ? smallestFirstMatch(smallestStates, targetGW)
     : closestMatch(rankedStates, targetGW)
 
 matchedStateSet = new Set(match.states.map(s => s.state))
 ```
 
-### 3. Result
+```{ojs}
+// Where the selection would slot into the state ranking.
+insertion = {
+  const bigger = rankedStates.filter(s => s.avg_gw > targetGW);
+  return {
+    rank: bigger.length + 1,
+    above: bigger[bigger.length - 1],
+    below: rankedStates[bigger.length]
+  };
+}
+```
 
 ```{ojs}
 readout = {
   if (selected.length === 0) {
-    return html`<div class="readout"><p>Select at least one data center above to see the comparison.</p></div>`;
+    return html`<div class="kpi-empty">Select at least one data center to see the comparison.</div>`;
   }
+
   const overUnder = match.total >= targetGW ? "over" : "under";
   const diff = Math.abs(match.total - targetGW).toFixed(2);
-  return html`<div class="readout">
-    <p><strong>${selected.length}</strong> data center${selected.length === 1 ? "" : "s"} selected,
-    totaling <strong>${targetGW.toFixed(2)} GW</strong>.</p>
-    <p>That is approximately the combined average electricity draw of
-    <strong>${match.states.length}</strong> state${match.states.length === 1 ? "" : "s"}
-    — ${match.total.toFixed(2)} GW total (${diff} GW ${overUnder} the target):</p>
-    <ul>${match.states.map(s => html`<li>${s.state_name} — ${s.avg_gw.toFixed(2)} GW average</li>`)}</ul>
+  const plural = n => n === 1 ? "" : "s";
+
+  return html`<div>
+    <div class="kpi-row">
+      <div class="kpi kpi-primary">
+        <div class="kpi-value">${targetGW.toFixed(2)} <span class="kpi-unit">GW</span></div>
+        <div class="kpi-label">Selected capacity</div>
+        <div class="kpi-sub">${selected.length} data center${plural(selected.length)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">${match.states.length}</div>
+        <div class="kpi-label">Equivalent state${plural(match.states.length)}</div>
+        <div class="kpi-sub">${match.total.toFixed(2)} GW · ${diff} GW ${overUnder}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">#${insertion.rank}</div>
+        <div class="kpi-label">Rank if it were a state</div>
+        <div class="kpi-sub">${insertion.above === undefined
+          ? "above every state"
+          : `below ${insertion.above.state_name}${insertion.below
+              ? `, above ${insertion.below.state_name}` : ""}`}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">${(targetGW / usTotalGW * 100).toFixed(1)}<span class="kpi-unit">%</span></div>
+        <div class="kpi-label">Of U.S. total</div>
+        <div class="kpi-sub">${usTotalGW.toFixed(0)} GW average load</div>
+      </div>
+    </div>
+    <p class="matched-list"><span class="matched-list-label">Matched states:</span>
+      ${match.states.map(s => s.state_name).join(", ")}</p>
   </div>`;
 }
-
-readout
 ```
-
-### 4. Map
 
 ```{ojs}
 legend = html`<div class="legend">
@@ -164,8 +230,6 @@ legend = html`<div class="legend">
   <span class="legend-item"><span class="swatch swatch-unmatched"></span> Unmatched state</span>
   ${Object.entries(powerSourceLabels).map(([key, label]) => html`<span class="legend-item"><span class="swatch dot" style="background:${powerSourceColor(key)}"></span> ${label}</span>`)}
 </div>`
-
-legend
 ```
 
 ```{ojs}
@@ -210,6 +274,93 @@ chart = {
 
   return svg.node();
 }
-
-chart
 ```
+
+#### Every state, sized by average power draw
+
+```{ojs}
+// One treemap holding all 51 states plus the selected data centers as
+// siblings, so a data center's rectangle is directly comparable to a state's.
+treemapLeaves = [
+  ...statePower.map(s => ({
+    kind: "state",
+    key: s.state,
+    label: s.state,
+    full: s.state_name,
+    value: s.avg_gw,
+    matched: matchedStateSet.has(s.state)
+  })),
+  ...selected.map(d => ({
+    kind: "dc",
+    key: `dc:${d.name}`,
+    label: d.name,
+    full: d.name,
+    value: d.capacity_gw,
+    power_source: d.power_source
+  }))
+]
+
+treemap = {
+  const width = 975;
+  const height = 380;
+
+  const root = d3.treemap()
+      .tile(d3.treemapSquarify)
+      .size([width, height])
+      .paddingInner(1.5)
+      .round(true)
+    (d3.hierarchy({ children: treemapLeaves })
+        .sum(d => d.value)
+        .sort((a, b) => d3.descending(a.value, b.value)));
+
+  const svg = d3.create("svg")
+      .attr("viewBox", [0, 0, width, height])
+      .attr("width", "100%")
+      .attr("height", "auto")
+      .attr("style", "max-width: 100%; height: auto;");
+
+  const cell = svg.selectAll("g")
+    .data(root.leaves())
+    .join("g")
+      .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+  cell.append("rect")
+      .attr("width", d => d.x1 - d.x0)
+      .attr("height", d => d.y1 - d.y0)
+      .attr("class", d => d.data.kind === "dc"
+        ? "tm-rect tm-dc"
+        : "tm-rect " + (d.data.matched ? "tm-matched" : "tm-unmatched"))
+      .attr("fill", d => d.data.kind === "dc" ? powerSourceColor(d.data.power_source) : null);
+
+  cell.append("title")
+      .text(d => `${d.data.full}: ${d.data.value.toFixed(2)} GW`
+        + (d.data.kind === "dc" ? " (data center capacity)" : " average draw"));
+
+  // Only label rectangles with room for the text.
+  const fits = (d, w, h) => (d.x1 - d.x0) > w && (d.y1 - d.y0) > h;
+
+  cell.filter(d => fits(d, 30, 14))
+    .append("text")
+      .attr("class", d => "tm-label" + (d.data.kind === "dc"
+        ? " tm-label-dc"
+        : d.data.matched ? " tm-on-fill" : ""))
+      .attr("x", 4)
+      .attr("y", 13)
+      .text(d => d.data.kind === "dc"
+        ? (fits(d, 90, 14) ? d.data.label : "\u25CF")
+        : d.data.label);
+
+  cell.filter(d => fits(d, 40, 30))
+    .append("text")
+      .attr("class", d => "tm-value" + (d.data.kind !== "dc" && d.data.matched ? " tm-on-fill" : ""))
+      .attr("x", 4)
+      .attr("y", 26)
+      .text(d => `${d.data.value.toFixed(1)} GW`);
+
+  return svg.node();
+}
+```
+
+:::
+
+::::

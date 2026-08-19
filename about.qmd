@@ -8,11 +8,9 @@ format:
 
 ## Summary
 
-A single AI data center campus proposed for Pike County, Ohio comes with a
+Individual AI data centers are growing in scale, consuming power that rivals that of states. For example, the campus proposed for Pike County, Ohio comes with a
 dedicated **9.2 gigawatt** natural gas power plant — described by regulators
 as capable of "powering more than half of Ohio's typical electrical load."
-That's one privately-built power plant, for one computing campus, rivaling
-the electricity use of an entire U.S. state.
 
 Numbers like "9.2 GW" are hard to hold in your head. This site tries to make
 them tangible by putting them next to something everyone already has an
@@ -26,10 +24,17 @@ intuition for: **states**.
 3. It then highlights the U.S. states whose combined *average* electricity
    draw adds up to roughly the same amount — using one of two matching
    strategies you can toggle between:
-   - **Biggest states first** — accumulate states from largest to smallest
-     average power draw until the target is met.
-   - **Closest total match** — search for the combination of states whose
-     total comes closest to the target.
+   - **Fewest whole states** (default) — accumulate states from *smallest*
+     to largest average power draw until the target is met. This answers
+     "how many entire states does this equal?"
+   - **Closest numeric match** — a subset-sum search for the combination of
+     states whose total lands closest to the target. Numerically precise,
+     but it typically returns only one or two arbitrary states.
+
+   Alongside the matched set, the tool reports where the selection would
+   **rank** if it were a state and its share of the **U.S. total**. A treemap
+   below the map sizes every state by its average draw, with the selected
+   data centers dropped in as siblings for direct comparison.
 
 ### Why "average power," not peak demand?
 
