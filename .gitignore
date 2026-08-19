@@ -4,3 +4,15 @@
 .Ruserdata
 .DS_Store
 .claude/
+.Renviron
+
+# Quarto
+/.quarto/
+/_site/
+/site_libs/
+
+# data-raw caches from tigris etc.
+data/cache/
+
+
+**/*.quarto_ipynb

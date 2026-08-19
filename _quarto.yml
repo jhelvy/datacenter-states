@@ -1,0 +1,33 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - "*.qmd"
+
+website:
+  title: "Data Centers vs. States"
+  description: "How much power do AI data centers really use? See it next to the states."
+  search: true
+  navbar:
+    left:
+      - href: index.qmd
+        text: Map
+      - href: about.qmd
+        text: About
+    tools:
+      - icon: github
+        href: https://github.com/jhelvy/datacenter-states
+        text: "Source code on GitHub"
+
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    css: styles.css
+    toc: false
+    grid:
+      body-width: 1000px
+
+execute:
+  echo: false

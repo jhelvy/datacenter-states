@@ -1,0 +1,85 @@
+---
+title: "About"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+## Summary
+
+A single AI data center campus proposed for Pike County, Ohio comes with a
+dedicated **9.2 gigawatt** natural gas power plant — described by regulators
+as capable of "powering more than half of Ohio's typical electrical load."
+That's one privately-built power plant, for one computing campus, rivaling
+the electricity use of an entire U.S. state.
+
+Numbers like "9.2 GW" are hard to hold in your head. This site tries to make
+them tangible by putting them next to something everyone already has an
+intuition for: **states**.
+
+## How it works
+
+1. **[Pick one or more data centers](index.qmd)** from a curated list of
+   large, publicly-reported U.S. projects.
+2. The tool sums their announced power capacity.
+3. It then highlights the U.S. states whose combined *average* electricity
+   draw adds up to roughly the same amount — using one of two matching
+   strategies you can toggle between:
+   - **Biggest states first** — accumulate states from largest to smallest
+     average power draw until the target is met.
+   - **Closest total match** — search for the combination of states whose
+     total comes closest to the target.
+
+### Why "average power," not peak demand?
+
+A data center's announced capacity (in MW or GW) is a continuous load — it
+runs close to that draw around the clock. To compare fairly, each state's
+**annual electricity consumption is converted into an equivalent average
+power draw**: `annual GWh ÷ 8,760 hours in a year`. This is the constant
+power a state would need if its yearly electricity use were spread evenly
+across every hour — directly comparable to a data center's steady-state GW
+figure.
+
+As a sanity check: Ohio's 2024 electricity sales imply an average draw of
+about **17.6 GW** — consistent with public reporting that the proposed 9.2
+GW Pike County plant would represent roughly half of the state's typical
+load.
+
+## Data sources
+
+Every dataset used here is documented in full, with retrieval dates and
+direct source links, in
+[`data/README.md`](https://github.com/jhelvy/datacenter-states/blob/main/data/README.md)
+in the project repository. In short:
+
+- **State electricity consumption**: U.S. Energy Information Administration
+  (EIA), Form EIA-861 annual retail sales by state (public domain).
+- **State boundaries**: U.S. Census Bureau TIGER/Line shapefiles via the R
+  [`tigris`](https://github.com/walkerke/tigris) package, repositioned so
+  Alaska and Hawaii appear as insets.
+- **Data centers**: hand-curated from public reporting, company
+  announcements, and utility/regulatory filings — every project links to
+  its source. No free, comprehensive, machine-readable dataset of U.S. data
+  center power capacity currently exists; the most complete one we found
+  ([Cleanview's behind-the-meter data center report](https://cleanview.co/reports/behind-the-meter-data-centers))
+  is paywalled, so this project builds its own small, fully-sourced list
+  instead.
+
+## Caveats
+
+- **Announced capacity isn't built capacity.** Figures reflect the best
+  public estimates at time of writing and will change as projects are
+  built out, delayed, or revised.
+- **This is a curated sample, not a census.** The data center list covers
+  ~10-15 marquee projects chosen for how well-documented and how large they
+  are — it does not attempt to catalog every U.S. data center.
+- **Average power, not instantaneous demand.** Real electricity use
+  fluctuates hour to hour and season to season for both data centers and
+  states; averaging smooths that out in exchange for a fair, simple
+  comparison.
+
+## Code
+
+All data processing and cartography run in R; the interactive map is built
+with Observable JS and D3. Source: [github.com/jhelvy/datacenter-states](https://github.com/jhelvy/datacenter-states).
