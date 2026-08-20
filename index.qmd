@@ -41,6 +41,29 @@ usTotalGW = d3.sum(statePower, s => s.avg_gw)
 
 ::: {.dash-side}
 
+#### Comparison mode
+
+```{ojs}
+viewof compareMode = Inputs.radio(
+  new Map([
+    ["States smaller than the selection", "smaller"],
+    ["Equivalent states — most whole states", "smallest"],
+    ["Equivalent states — closest total", "closest"]
+  ]),
+  { value: "smaller" }
+)
+```
+
+```{ojs}
+strategyNote = html`<p class="strategy-note">${
+  compareMode === "smaller"
+    ? "Highlights every state whose average electricity load is smaller than the selected data-center capacity. The remaining states each draw more power than the selection on their own."
+    : compareMode === "smallest"
+      ? "Adds up whole states starting from the smallest electricity consumer until their combined average load reaches the selected capacity."
+      : "Searches every combination of states for the subset whose combined average load lands closest to the selected capacity."
+}</p>`
+```
+
 #### Data centers
 
 ```{ojs}
@@ -78,26 +101,6 @@ viewof selectedNames = Inputs.checkbox(
 ```{ojs}
 selected = datacenters.filter(d => selectedNames.includes(d.name))
 targetGW = d3.sum(selected, d => d.capacity_gw)
-```
-
-#### Matching strategy
-
-```{ojs}
-viewof matchMode = Inputs.radio(
-  new Map([
-    ["Fewest whole states", "smallest"],
-    ["Closest numeric match", "closest"]
-  ]),
-  { value: "smallest" }
-)
-```
-
-```{ojs}
-strategyNote = html`<p class="strategy-note">${
-  matchMode === "smallest"
-    ? "Adds up whole states starting from the smallest electricity consumer until their combined average load reaches the selected capacity."
-    : "Searches every combination of states for the subset whose combined average load lands closest to the selected capacity."
-}</p>`
 ```
 
 :::
@@ -161,13 +164,28 @@ function closestMatch(states, target) {
   return { states: chosenIdx.map(i => states[i]), total: bestSum / scale };
 }
 
-match = selected.length === 0
+match = (selected.length === 0 || compareMode === "smaller")
   ? { states: [], total: 0 }
-  : matchMode === "smallest"
+  : compareMode === "smallest"
     ? smallestFirstMatch(smallestStates, targetGW)
     : closestMatch(rankedStates, targetGW)
 
 matchedStateSet = new Set(match.states.map(s => s.state))
+
+// Threshold view: every state that draws less power than the selection.
+smallerStates = targetGW > 0
+  ? rankedStates.filter(s => s.avg_gw < targetGW)
+  : []
+
+// Single source of truth for how a state is tinted, in every mode.
+// Returns: "below" | "above" | "matched" | "unmatched"
+stateTone = {
+  if (compareMode === "smaller") {
+    const below = new Set(smallerStates.map(s => s.state));
+    return abbr => targetGW === 0 ? "unmatched" : (below.has(abbr) ? "below" : "above");
+  }
+  return abbr => matchedStateSet.has(abbr) ? "matched" : "unmatched";
+}
 ```
 
 ```{ojs}
@@ -199,11 +217,17 @@ readout = {
         <div class="kpi-label">Selected capacity</div>
         <div class="kpi-sub">${selected.length} data center${plural(selected.length)}</div>
       </div>
-      <div class="kpi">
-        <div class="kpi-value">${match.states.length}</div>
-        <div class="kpi-label">Equivalent state${plural(match.states.length)}</div>
-        <div class="kpi-sub">${match.total.toFixed(2)} GW · ${diff} GW ${overUnder}</div>
-      </div>
+      ${compareMode === "smaller"
+        ? html`<div class="kpi">
+            <div class="kpi-value">${smallerStates.length}</div>
+            <div class="kpi-label">State${plural(smallerStates.length)} smaller than selection</div>
+            <div class="kpi-sub">of ${statePower.length} states</div>
+          </div>`
+        : html`<div class="kpi">
+            <div class="kpi-value">${match.states.length}</div>
+            <div class="kpi-label">Equivalent state${plural(match.states.length)}</div>
+            <div class="kpi-sub">${match.total.toFixed(2)} GW · ${diff} GW ${overUnder}</div>
+          </div>`}
       <div class="kpi">
         <div class="kpi-value">#${insertion.rank}</div>
         <div class="kpi-label">Rank if it were a state</div>
@@ -218,16 +242,26 @@ readout = {
         <div class="kpi-sub">${usTotalGW.toFixed(0)} GW average load</div>
       </div>
     </div>
-    <p class="matched-list"><span class="matched-list-label">Matched states:</span>
-      ${match.states.map(s => s.state_name).join(", ")}</p>
+    ${compareMode === "smaller"
+      ? html`<p class="matched-list"><span class="matched-list-label">Where it lands:</span>
+          ${insertion.above === undefined
+            ? `Draws more power than every state, including ${rankedStates[0].state_name}.`
+            : insertion.below === undefined
+              ? `Draws less power than every state, including ${rankedStates[rankedStates.length - 1].state_name}.`
+              : `Bigger than ${smallerStates.length} state${plural(smallerStates.length)} — sits just above ${insertion.below.state_name} and just below ${insertion.above.state_name}.`}</p>`
+      : html`<p class="matched-list"><span class="matched-list-label">Matched states:</span>
+          ${match.states.map(s => s.state_name).join(", ")}</p>`}
   </div>`;
 }
 ```
 
 ```{ojs}
 legend = html`<div class="legend">
-  <span class="legend-item"><span class="swatch swatch-matched"></span> Matched state${match.states.length === 1 ? "" : "s"}</span>
-  <span class="legend-item"><span class="swatch swatch-unmatched"></span> Unmatched state</span>
+  ${compareMode === "smaller"
+    ? html`<span class="legend-item"><span class="swatch swatch-below"></span> Smaller than selection</span>
+           <span class="legend-item"><span class="swatch swatch-above"></span> Larger than selection</span>`
+    : html`<span class="legend-item"><span class="swatch swatch-matched"></span> Matched state${match.states.length === 1 ? "" : "s"}</span>
+           <span class="legend-item"><span class="swatch swatch-unmatched"></span> Unmatched state</span>`}
   ${Object.entries(powerSourceLabels).map(([key, label]) => html`<span class="legend-item"><span class="swatch dot" style="background:${powerSourceColor(key)}"></span> ${label}</span>`)}
 </div>`
 ```
@@ -251,7 +285,7 @@ chart = {
     .data(statesGeo.features)
     .join("path")
       .attr("d", path)
-      .attr("class", d => "state-path " + (matchedStateSet.has(d.properties.state) ? "state-matched" : "state-unmatched"))
+      .attr("class", d => "state-path state-" + stateTone(d.properties.state))
     .append("title")
       .text(d => `${d.properties.state_name}: ${(stateAvgGwByAbbr.get(d.properties.state) ?? 0).toFixed(2)} GW avg`);
 
@@ -288,7 +322,7 @@ treemapLeaves = [
     label: s.state,
     full: s.state_name,
     value: s.avg_gw,
-    matched: matchedStateSet.has(s.state)
+    tone: stateTone(s.state)
   })),
   ...selected.map(d => ({
     kind: "dc",
@@ -329,7 +363,7 @@ treemap = {
       .attr("height", d => d.y1 - d.y0)
       .attr("class", d => d.data.kind === "dc"
         ? "tm-rect tm-dc"
-        : "tm-rect " + (d.data.matched ? "tm-matched" : "tm-unmatched"))
+        : "tm-rect tm-" + d.data.tone)
       .attr("fill", d => d.data.kind === "dc" ? powerSourceColor(d.data.power_source) : null);
 
   cell.append("title")
@@ -343,7 +377,7 @@ treemap = {
     .append("text")
       .attr("class", d => "tm-label" + (d.data.kind === "dc"
         ? " tm-label-dc"
-        : d.data.matched ? " tm-on-fill" : ""))
+        : d.data.tone !== "unmatched" ? " tm-on-fill" : ""))
       .attr("x", 4)
       .attr("y", 13)
       .text(d => d.data.kind === "dc"
@@ -352,7 +386,7 @@ treemap = {
 
   cell.filter(d => fits(d, 40, 30))
     .append("text")
-      .attr("class", d => "tm-value" + (d.data.kind !== "dc" && d.data.matched ? " tm-on-fill" : ""))
+      .attr("class", d => "tm-value" + (d.data.kind !== "dc" && d.data.tone !== "unmatched" ? " tm-on-fill" : ""))
       .attr("x", 4)
       .attr("y", 26)
       .text(d => `${d.data.value.toFixed(1)} GW`);

@@ -53,6 +53,14 @@
   background: var(--bs-secondary-bg, #e0e0e0);
 }
 
+.legend .swatch-below {
+  background: #2ca25f;
+}
+
+.legend .swatch-above {
+  background: #5a6572;
+}
+
 /* SVG map (index.qmd) */
 
 .state-path {
@@ -66,6 +74,16 @@
 
 .state-unmatched {
   fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+/* Two-tone threshold view: below vs above the selected capacity. */
+
+.state-below {
+  fill: #2ca25f;
+}
+
+.state-above {
+  fill: #5a6572;
 }
 
 .dc-dot {
@@ -252,6 +270,14 @@
 
 .tm-unmatched {
   fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+.tm-below {
+  fill: #2ca25f;
+}
+
+.tm-above {
+  fill: #5a6572;
 }
 
 .tm-dc {
