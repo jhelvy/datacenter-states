@@ -21,10 +21,33 @@
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
+  gap: 1.25rem 3rem;
+  align-items: flex-start;
   margin: 0.5rem 0 1rem 0;
   font-size: 0.9rem;
+}
+
+/* Each key is a left-aligned vertical stack under its own title. */
+
+.legend-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+/* Push the power-source key over to the right side of the map. */
+
+.legend-group-sources {
+  margin-left: auto;
+}
+
+.legend-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color, #666);
 }
 
 .legend-item {
@@ -58,7 +81,7 @@
 }
 
 .legend .swatch-above {
-  background: #5a6572;
+  background: #adb4bb;
 }
 
 /* SVG map (index.qmd) */
@@ -83,7 +106,7 @@
 }
 
 .state-above {
-  fill: #5a6572;
+  fill: #adb4bb;
 }
 
 .dc-dot {
@@ -277,7 +300,7 @@
 }
 
 .tm-above {
-  fill: #5a6572;
+  fill: #adb4bb;
 }
 
 .tm-dc {

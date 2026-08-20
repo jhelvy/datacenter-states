@@ -257,12 +257,20 @@ readout = {
 
 ```{ojs}
 legend = html`<div class="legend">
-  ${compareMode === "smaller"
-    ? html`<span class="legend-item"><span class="swatch swatch-below"></span> Smaller than selection</span>
-           <span class="legend-item"><span class="swatch swatch-above"></span> Larger than selection</span>`
-    : html`<span class="legend-item"><span class="swatch swatch-matched"></span> Matched state${match.states.length === 1 ? "" : "s"}</span>
-           <span class="legend-item"><span class="swatch swatch-unmatched"></span> Unmatched state</span>`}
-  ${Object.entries(powerSourceLabels).map(([key, label]) => html`<span class="legend-item"><span class="swatch dot" style="background:${powerSourceColor(key)}"></span> ${label}</span>`)}
+  <div class="legend-group">
+    <div class="legend-title">${compareMode === "smaller"
+      ? "State average power draw"
+      : "State match"}</div>
+    ${compareMode === "smaller"
+      ? html`<span class="legend-item"><span class="swatch swatch-below"></span> Smaller than selection</span>
+             <span class="legend-item"><span class="swatch swatch-above"></span> Larger than selection</span>`
+      : html`<span class="legend-item"><span class="swatch swatch-matched"></span> Matched state${match.states.length === 1 ? "" : "s"}</span>
+             <span class="legend-item"><span class="swatch swatch-unmatched"></span> Unmatched state</span>`}
+  </div>
+  <div class="legend-group legend-group-sources">
+    <div class="legend-title">Data center power source</div>
+    ${Object.entries(powerSourceLabels).map(([key, label]) => html`<span class="legend-item"><span class="swatch dot" style="background:${powerSourceColor(key)}"></span> ${label}</span>`)}
+  </div>
 </div>`
 ```
 
@@ -377,7 +385,7 @@ treemap = {
     .append("text")
       .attr("class", d => "tm-label" + (d.data.kind === "dc"
         ? " tm-label-dc"
-        : d.data.tone !== "unmatched" ? " tm-on-fill" : ""))
+        : (d.data.tone === "below" || d.data.tone === "matched") ? " tm-on-fill" : ""))
       .attr("x", 4)
       .attr("y", 13)
       .text(d => d.data.kind === "dc"
@@ -386,7 +394,8 @@ treemap = {
 
   cell.filter(d => fits(d, 40, 30))
     .append("text")
-      .attr("class", d => "tm-value" + (d.data.kind !== "dc" && d.data.tone !== "unmatched" ? " tm-on-fill" : ""))
+      .attr("class", d => "tm-value" + (d.data.kind !== "dc"
+        && (d.data.tone === "below" || d.data.tone === "matched") ? " tm-on-fill" : ""))
       .attr("x", 4)
       .attr("y", 26)
       .text(d => `${d.data.value.toFixed(1)} GW`);
