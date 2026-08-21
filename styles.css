@@ -227,19 +227,13 @@ h1, h2, h3, h4, h5, h6,
   border: 1px solid var(--bs-border-color, #dee2e6);
   border-radius: 8px;
   padding: 1rem 1.1rem 1.15rem 1.1rem;
+  background: var(--bs-tertiary-bg, #f8f9fa);
   box-shadow: var(--dcs-shadow);
 }
 
-/* The mode box is the question being asked, so it sits forward: body
-   background and an accent border. The data center box is the input list and
-   stays recessed on the tertiary grey. */
+/* Both boxes share the grey; the mode box is set apart by its border alone. */
 .panel-mode {
-  background: var(--bs-body-bg, #fff);
   border-color: var(--dcs-green);
-}
-
-.panel-dc {
-  background: var(--bs-tertiary-bg, #f8f9fa);
 }
 
 .dash-side h4 {
