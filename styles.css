@@ -1,0 +1,528 @@
+/* Theme-aware styling for the map and about pages. Uses Bootstrap 5.3 CSS
+   variables (which Quarto keeps in sync with the active light/dark theme)
+   instead of hardcoded colors, so nothing needs to change when the user
+   toggles dark mode. */
+
+/* ---- Design tokens ---------------------------------------------------- */
+
+:root {
+  /* Raleway is a display face: strong at heading sizes, hard to read in the
+     0.78rem sidebar meta lines, so body text runs on Inter instead. */
+  --dcs-display: "Raleway", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --dcs-body: "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+
+  --dcs-green: #2ca25f;
+  --dcs-green-soft: rgba(44, 162, 95, 0.09);
+  --dcs-ink: #12303f;
+
+  --dcs-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+    0 2px 6px rgba(16, 24, 40, 0.06);
+
+  --bs-body-font-family: var(--dcs-body);
+}
+
+body {
+  font-family: var(--dcs-body);
+}
+
+/* The navbar runs on the dark ink set in _quarto.yml; its accent follows the
+   map's highlight green rather than cosmo's default blue. */
+.navbar {
+  --bs-navbar-active-color: #6fd39b;
+  --bs-navbar-hover-color: #6fd39b;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand {
+  font-family: var(--dcs-display);
+  letter-spacing: -0.01em;
+}
+
+/* Figures re-render on every selection change; proportional digits make the
+   numbers jitter as they swap, so everything numeric gets fixed-width ones. */
+.kpi-value,
+.kpi-sub,
+.opt-meta,
+.matched-list,
+.viz-tip-sub {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Runs the full width of the dashboard rather than a narrow reading column. */
+.lede {
+  max-width: 1500px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: var(--bs-secondary-color, #555);
+  margin: -0.25rem 0 1.5rem 0;
+}
+
+/* ---- Shared bits ------------------------------------------------------ */
+
+.readout {
+  background: var(--bs-tertiary-bg, #f7f7f7);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0 1.5rem 0;
+}
+
+.readout ul {
+  margin: 0.5rem 0 0 0;
+}
+
+.fig-note {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--bs-secondary-color, #666);
+  max-width: 78ch;
+  margin: 0.6rem 0 1.5rem 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 3rem;
+  align-items: flex-start;
+  margin: 0.5rem 0 1rem 0;
+  font-size: 0.9rem;
+}
+
+/* Each key is a left-aligned vertical stack under its own title. */
+
+.legend-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.legend-title {
+  font-family: var(--dcs-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color, #666);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend .swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.legend .swatch.dot {
+  border-radius: 50%;
+  border: 1px solid var(--bs-border-color, #111);
+}
+
+/* ---- SVG map (index.qmd) ---------------------------------------------- */
+
+.state-path {
+  stroke: var(--bs-body-bg, #fff);
+  stroke-width: 0.75px;
+  transition: fill 260ms ease;
+}
+
+.state-matched {
+  fill: var(--dcs-green);
+}
+
+.state-unmatched {
+  fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+/* Two-tone threshold view: below vs above the selected capacity. */
+
+.state-below {
+  fill: var(--dcs-green);
+}
+
+.state-above {
+  fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+.dc-dot {
+  stroke: var(--bs-body-bg, #fff);
+  stroke-width: 1.5px;
+}
+
+.dc-label {
+  font-size: 11px;
+  fill: var(--bs-body-color, #111);
+  paint-order: stroke;
+  stroke: var(--bs-body-bg, #fff);
+  stroke-width: 3px;
+}
+
+/* Drawn when de-collision has pushed a label off its own dot. */
+.dc-leader {
+  stroke: var(--bs-body-color, #111);
+  stroke-width: 1px;
+  opacity: 0.45;
+}
+
+/* ---- Hover tooltip (map + treemap) ------------------------------------ */
+
+.viz-wrap {
+  position: relative;
+}
+
+.viz-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  transform: translate(-50%, -118%);
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.14);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.viz-tip[hidden] {
+  display: none;
+}
+
+.viz-tip-name {
+  display: block;
+  font-weight: 600;
+}
+
+.viz-tip-sub {
+  color: var(--bs-secondary-color, #666);
+}
+
+/* ---- Dashboard layout (index.qmd) ------------------------------------- */
+
+.dash {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 1500px;
+}
+
+/* Two boxes -- comparison mode, then data centers -- stacked and sticky. */
+.dash-side {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.15rem 1.1rem;
+  background: var(--bs-tertiary-bg, #f8f9fa);
+  box-shadow: var(--dcs-shadow);
+}
+
+/* Both boxes share the grey; the mode box is set apart by its border alone. */
+.panel-mode {
+  border-color: var(--dcs-green);
+}
+
+.dash-side h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bs-secondary-color, #666);
+  margin: 1.25rem 0 0.5rem 0;
+}
+
+.panel h4:first-child {
+  margin-top: 0;
+}
+
+.dash-main h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: 1.75rem 0 0.4rem 0;
+}
+
+/* Observable Inputs render a fixed-width form; let them fill the sidebar. */
+.dash-side form {
+  max-width: 100%;
+}
+
+.dash-side form > div {
+  max-width: 100%;
+}
+
+/* Observable Inputs centre the box against the whole label, which lands it
+   beside line 2 of any option that wraps. Top-align box and text instead. */
+.dash-side form label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: 100%;
+  line-height: 1.35;
+}
+
+.dash-side form input[type="checkbox"],
+.dash-side form input[type="radio"] {
+  flex: 0 0 auto;
+  margin: 0.28rem 0 0 0;
+}
+
+/* One option row: bold name, small qualifier beneath. Used by both the
+   comparison-mode radios and the data-center checkboxes so the two boxes read
+   the same way. */
+.opt {
+  display: inline-block;
+  line-height: 1.3;
+  vertical-align: top;
+}
+
+.opt-name {
+  display: block;
+  font-weight: 600;
+}
+
+.opt-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--bs-secondary-color, #666);
+}
+
+.strategy-note {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--bs-secondary-color, #666);
+  border-left: 2px solid var(--bs-border-color, #dee2e6);
+  padding-left: 0.6rem;
+  margin: 0.6rem 0 0 0;
+}
+
+/* ---- Option lists ----------------------------------------------------- */
+
+.opt-list {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  margin: 0 -0.35rem;
+  padding: 0 0.35rem;
+}
+
+/* Observable Inputs may put the options in a wrapper div or directly in the
+   form depending on version; make both a vertical stack. */
+.opt-list form,
+.opt-list form > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.opt-list form label {
+  padding: 0.45rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.opt-list form label:first-child {
+  border-top: none;
+}
+
+.opt-list form label:hover {
+  background: var(--bs-secondary-bg, #e9ecef);
+}
+
+/* Checked rows echo the map's highlight color. */
+.opt-list form label:has(input:checked) {
+  background: var(--dcs-green-soft);
+  box-shadow: inset 3px 0 0 var(--dcs-green);
+}
+
+/* Eleven two-line options overflow the viewport and defeat the sticky
+   sidebar, so only the data-center list scrolls inside a fixed frame. */
+.dc-list {
+  max-height: min(40vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---- Results bar ------------------------------------------------------ */
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.kpi {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  background: var(--bs-body-bg, #fff);
+  box-shadow: var(--dcs-shadow);
+}
+
+.kpi-primary {
+  border-color: var(--dcs-green);
+}
+
+.kpi-value {
+  font-family: var(--dcs-display);
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.kpi-unit {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--bs-secondary-color, #666);
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+.kpi-sub {
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color, #666);
+  margin-top: 0.1rem;
+}
+
+.kpi-empty {
+  border: 1px dashed var(--bs-border-color, #dee2e6);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--bs-secondary-color, #666);
+}
+
+.matched-list {
+  font-size: 0.82rem;
+  color: var(--bs-secondary-color, #666);
+  margin: 0 0 0.5rem 0;
+}
+
+.matched-list-label {
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .dash {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dash-side {
+    position: static;
+  }
+
+  .dc-list {
+    max-height: none;
+  }
+}
+
+/* ---- Sidebar select-all / clear buttons ------------------------------- */
+
+.dc-btn-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.dc-btn {
+  flex: 1;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 4px;
+  background: var(--bs-body-bg, #fff);
+  color: inherit;
+  cursor: pointer;
+}
+
+.dc-btn:hover {
+  background: var(--bs-secondary-bg, #e9ecef);
+}
+
+/* ---- Treemap ---------------------------------------------------------- */
+
+.tm-rect {
+  stroke: var(--bs-body-bg, #fff);
+  stroke-width: 0.5px;
+  transition: fill 260ms ease;
+}
+
+.tm-matched {
+  fill: var(--dcs-green);
+}
+
+.tm-unmatched {
+  fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+.tm-below {
+  fill: var(--dcs-green);
+}
+
+.tm-above {
+  fill: var(--bs-secondary-bg, #e0e0e0);
+}
+
+.tm-dc {
+  stroke: #212529;
+  stroke-width: 1.75px;
+}
+
+.tm-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #212529;
+  pointer-events: none;
+}
+
+.tm-label-dc {
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 2.5px;
+}
+
+.tm-value {
+  font-size: 10px;
+  fill: #495057;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Labels sitting on the filled (matched) green need to flip to white. */
+.tm-on-fill {
+  fill: #fff;
+}
+
+/* Hover outline for map states and treemap cells. Declared last so it wins
+   against the per-tone stroke rules above (equal specificity). */
+.is-hovered {
+  stroke: var(--dcs-ink);
+  stroke-width: 1.6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-path,
+  .tm-rect,
+  .opt-list form label {
+    transition: none;
+  }
+}
