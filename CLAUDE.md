@@ -75,6 +75,16 @@ Every code cell is `{ojs}`. There are no R chunks in any `.qmd`.
   because a cell's value is its output slot — `chart` holds the real one.
 - `makeTooltip(container)` is the shared hover tooltip for the map and the
   treemap. Do not go back to SVG `<title>`: it is delayed ~1s and unstyleable.
+- The sidebar is two `.panel` boxes inside `.dash-side`: `.panel-mode` (the
+  question) and `.panel-dc` (the inputs). Both option lists share the `.opt-list`
+  row styling and the `.opt` / `.opt-name` / `.opt-meta` two-line markup, fed by
+  the `format:` callback of `Inputs.radio` / `Inputs.checkbox`. `.dc-list` adds
+  only the scroll cap. Keep the two lists visually identical — that parallel is
+  the point.
+- Nesting means the Quarto fences are deep: `.dash` is `::::::`, `.dash-side` and
+  `.dash-main` are `:::::`, `.panel` is `::::`, `.opt-list` is `:::`. A child
+  fence must be shorter than its parent, so adding a level means widening the
+  ones above it.
 - `d3` and `Inputs` come from Quarto's OJS stdlib — no `require` or import.
 - Quarto emits one output div per top-level statement in an `{ojs}` block, but
   only DOM-valued cells render anything visible, so plain values and function

@@ -10,9 +10,9 @@ resources:
 ---
 
 ::: {.lede}
-A single announced AI data center campus can draw as much electric power as an
-entire state. Pick one or more below to see which states it outweighs — and
-where it would rank if it were one.
+A single AI data center can draw as much electric power as an entire state -
+pick one or more below to see which states it outweighs and where it would
+rank if it were one.
 :::
 
 ```{ojs}
@@ -46,22 +46,39 @@ stateRankByAbbr = new Map(rankedStates.map((s, i) => [s.state, i + 1]))
 usTotalGW = d3.sum(statePower, s => s.avg_gw)
 ```
 
-:::: {.dash}
+:::::: {.dash}
 
-::: {.dash-side}
+::::: {.dash-side}
+
+:::: {.panel .panel-mode}
 
 #### Comparison mode
 
 ```{ojs}
+// Name on top, qualifier beneath, matching the data-center rows below.
+compareModeOptions = ({
+  smaller: { name: "States smaller than the selection", sub: "one state at a time" },
+  smallest: { name: "Equivalent states", sub: "most whole states" },
+  closest: { name: "Equivalent states", sub: "closest total" }
+})
+```
+
+::: {.opt-list}
+
+```{ojs}
 viewof compareMode = Inputs.radio(
-  new Map([
-    ["States smaller than the selection", "smaller"],
-    ["Equivalent states — most whole states", "smallest"],
-    ["Equivalent states — closest total", "closest"]
-  ]),
-  { value: "smaller" }
+  ["smaller", "smallest", "closest"],
+  {
+    value: "smaller",
+    format: key => html`<span class="opt">
+      <span class="opt-name">${compareModeOptions[key].name}</span>
+      <span class="opt-meta">${compareModeOptions[key].sub}</span>
+    </span>`
+  }
 )
 ```
+
+:::
 
 ```{ojs}
 strategyNote = html`<p class="strategy-note">${
@@ -72,6 +89,10 @@ strategyNote = html`<p class="strategy-note">${
       : "Searches every combination of states for the subset whose combined average load lands closest to the selected capacity."
 }</p>`
 ```
+
+::::
+
+:::: {.panel .panel-dc}
 
 #### Data centers
 
@@ -90,7 +111,7 @@ selectionButtons = {
 }
 ```
 
-::: {.dc-list}
+::: {.opt-list .dc-list}
 
 ```{ojs}
 viewof selectedNames = Inputs.checkbox(
@@ -99,9 +120,9 @@ viewof selectedNames = Inputs.checkbox(
     value: [datacenters[0].name],
     format: name => {
       const d = datacenters.find(dc => dc.name === name);
-      return html`<span class="dc-option">
-        <span class="dc-option-name">${d.name}</span>
-        <span class="dc-meta">${d.capacity_gw.toFixed(2)} GW · ${d.state} ·
+      return html`<span class="opt">
+        <span class="opt-name">${d.name}</span>
+        <span class="opt-meta">${d.capacity_gw.toFixed(2)} GW · ${d.state} ·
         ${powerSourceLabels[d.power_source]} · ${d.status.replace(/_/g, " ")}</span>
       </span>`;
     }
@@ -116,9 +137,11 @@ selected = datacenters.filter(d => selectedNames.includes(d.name))
 targetGW = d3.sum(selected, d => d.capacity_gw)
 ```
 
-:::
+::::
 
-::: {.dash-main}
+:::::
+
+::::: {.dash-main}
 
 ```{ojs}
 // Accumulate states from the smallest consumer upward until the running total
@@ -531,6 +554,6 @@ treemap = {
 }
 ```
 
-:::
+:::::
 
-::::
+::::::

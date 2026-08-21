@@ -26,6 +26,13 @@ body {
   font-family: var(--dcs-body);
 }
 
+/* The navbar runs on the dark ink set in _quarto.yml; its accent follows the
+   map's highlight green rather than cosmo's default blue. */
+.navbar {
+  --bs-navbar-active-color: #6fd39b;
+  --bs-navbar-hover-color: #6fd39b;
+}
+
 h1, h2, h3, h4, h5, h6,
 .navbar-brand {
   font-family: var(--dcs-display);
@@ -36,16 +43,17 @@ h1, h2, h3, h4, h5, h6,
    numbers jitter as they swap, so everything numeric gets fixed-width ones. */
 .kpi-value,
 .kpi-sub,
-.dc-meta,
+.opt-meta,
 .matched-list,
 .viz-tip-sub {
   font-variant-numeric: tabular-nums;
 }
 
+/* Runs the full width of the dashboard rather than a narrow reading column. */
 .lede {
-  max-width: 62ch;
-  font-size: 1.05rem;
-  line-height: 1.55;
+  max-width: 1500px;
+  font-size: 1.1rem;
+  line-height: 1.5;
   color: var(--bs-secondary-color, #555);
   margin: -0.25rem 0 1.5rem 0;
 }
@@ -61,10 +69,6 @@ h1, h2, h3, h4, h5, h6,
 
 .readout ul {
   margin: 0.5rem 0 0 0;
-}
-
-.dc-meta {
-  color: var(--bs-secondary-color, #666);
 }
 
 .fig-note {
@@ -210,14 +214,32 @@ h1, h2, h3, h4, h5, h6,
   max-width: 1500px;
 }
 
+/* Two boxes -- comparison mode, then data centers -- stacked and sticky. */
 .dash-side {
   position: sticky;
   top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel {
   border: 1px solid var(--bs-border-color, #dee2e6);
   border-radius: 8px;
-  padding: 1rem 1.1rem 1.25rem 1.1rem;
-  background: var(--bs-tertiary-bg, #f8f9fa);
+  padding: 1rem 1.1rem 1.15rem 1.1rem;
   box-shadow: var(--dcs-shadow);
+}
+
+/* The mode box is the question being asked, so it sits forward: body
+   background and an accent border. The data center box is the input list and
+   stays recessed on the tertiary grey. */
+.panel-mode {
+  background: var(--bs-body-bg, #fff);
+  border-color: var(--dcs-green);
+}
+
+.panel-dc {
+  background: var(--bs-tertiary-bg, #f8f9fa);
 }
 
 .dash-side h4 {
@@ -228,7 +250,7 @@ h1, h2, h3, h4, h5, h6,
   margin: 1.25rem 0 0.5rem 0;
 }
 
-.dash-side h4:first-child {
+.panel h4:first-child {
   margin-top: 0;
 }
 
@@ -264,18 +286,21 @@ h1, h2, h3, h4, h5, h6,
   margin: 0.28rem 0 0 0;
 }
 
-.dc-option {
+/* One option row: bold name, small qualifier beneath. Used by both the
+   comparison-mode radios and the data-center checkboxes so the two boxes read
+   the same way. */
+.opt {
   display: inline-block;
   line-height: 1.3;
   vertical-align: top;
 }
 
-.dc-option-name {
+.opt-name {
   display: block;
   font-weight: 600;
 }
 
-.dc-meta {
+.opt-meta {
   display: block;
   font-size: 0.78rem;
   color: var(--bs-secondary-color, #666);
@@ -290,14 +315,9 @@ h1, h2, h3, h4, h5, h6,
   margin: 0.6rem 0 0 0;
 }
 
-/* ---- Data center list ------------------------------------------------- */
+/* ---- Option lists ----------------------------------------------------- */
 
-/* Eleven two-line options overflow the viewport and defeat the sticky
-   sidebar, so the list scrolls inside a fixed frame of its own. */
-.dc-list {
-  max-height: min(44vh, 400px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+.opt-list {
   border-top: 1px solid var(--bs-border-color, #dee2e6);
   border-bottom: 1px solid var(--bs-border-color, #dee2e6);
   margin: 0 -0.35rem;
@@ -306,13 +326,13 @@ h1, h2, h3, h4, h5, h6,
 
 /* Observable Inputs may put the options in a wrapper div or directly in the
    form depending on version; make both a vertical stack. */
-.dc-list form,
-.dc-list form > div {
+.opt-list form,
+.opt-list form > div {
   display: flex;
   flex-direction: column;
 }
 
-.dc-list form label {
+.opt-list form label {
   padding: 0.45rem;
   border-top: 1px solid var(--bs-border-color, #dee2e6);
   border-radius: 4px;
@@ -320,18 +340,26 @@ h1, h2, h3, h4, h5, h6,
   transition: background-color 120ms ease;
 }
 
-.dc-list form label:first-child {
+.opt-list form label:first-child {
   border-top: none;
 }
 
-.dc-list form label:hover {
+.opt-list form label:hover {
   background: var(--bs-secondary-bg, #e9ecef);
 }
 
 /* Checked rows echo the map's highlight color. */
-.dc-list form label:has(input:checked) {
+.opt-list form label:has(input:checked) {
   background: var(--dcs-green-soft);
   box-shadow: inset 3px 0 0 var(--dcs-green);
+}
+
+/* Eleven two-line options overflow the viewport and defeat the sticky
+   sidebar, so only the data-center list scrolls inside a fixed frame. */
+.dc-list {
+  max-height: min(40vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ---- Results bar ------------------------------------------------------ */
@@ -500,7 +528,7 @@ h1, h2, h3, h4, h5, h6,
 @media (prefers-reduced-motion: reduce) {
   .state-path,
   .tm-rect,
-  .dc-list form label {
+  .opt-list form label {
     transition: none;
   }
 }

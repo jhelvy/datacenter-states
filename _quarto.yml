@@ -19,13 +19,15 @@ website:
     # the navbar is redundant, so the brand is dropped and the two pages carry
     # icons instead.
     title: false
+    background: "#12303f"
+    foreground: light
     left:
       - href: index.qmd
         text: Map
-        icon: map
+        icon: map-fill
       - href: about.qmd
         text: About
-        icon: info-circle
+        icon: info-circle-fill
     tools:
       - icon: github
         href: https://github.com/jhelvy/datacenter-states
