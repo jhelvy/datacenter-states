@@ -4,6 +4,8 @@ A static Quarto website that makes the scale of AI data center power demand
 tangible: pick one or more data centers and see the map light up the set of
 U.S. states whose combined average electricity draw equals that same power.
 
+View it live at https://jhelvy.github.io/datacenter-states/
+
 ![The site in use: selecting data centers and watching the matching states light up](datacenter-states.gif)
 
 ## What the app does
