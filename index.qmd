@@ -9,6 +9,12 @@ resources:
   - data/processed/datacenters.json
 ---
 
+::: {.lede}
+A single announced AI data center campus can draw as much electric power as an
+entire state. Pick one or more below to see which states it outweighs — and
+where it would rank if it were one.
+:::
+
 ```{ojs}
 statesGeo = FileAttachment("data/processed/us_states.geojson").json()
 statePower = FileAttachment("data/processed/state_power.csv").csv({typed: true})
@@ -33,6 +39,9 @@ stateAvgGwByAbbr = new Map(statePower.map(s => [s.state, s.avg_gw]))
 // and the rank readout work off these.
 rankedStates = [...statePower].sort((a, b) => d3.descending(a.avg_gw, b.avg_gw))
 smallestStates = [...statePower].sort((a, b) => d3.ascending(a.avg_gw, b.avg_gw))
+
+// 1 = biggest consumer. Shown in the map's hover tooltip.
+stateRankByAbbr = new Map(rankedStates.map((s, i) => [s.state, i + 1]))
 
 usTotalGW = d3.sum(statePower, s => s.avg_gw)
 ```
@@ -81,6 +90,8 @@ selectionButtons = {
 }
 ```
 
+::: {.dc-list}
+
 ```{ojs}
 viewof selectedNames = Inputs.checkbox(
   datacenters.map(d => d.name),
@@ -97,6 +108,8 @@ viewof selectedNames = Inputs.checkbox(
   }
 )
 ```
+
+:::
 
 ```{ojs}
 selected = datacenters.filter(d => selectedNames.includes(d.name))
@@ -162,6 +175,38 @@ function closestMatch(states, target) {
   }
 
   return { states: chosenIdx.map(i => states[i]), total: bestSum / scale };
+}
+
+// Floating hover tooltip shared by the map and the treemap. The native SVG
+// <title> element is delayed ~1s, unstyleable, and can't show a rank line.
+function makeTooltip(container) {
+  const tip = document.createElement("div");
+  tip.className = "viz-tip";
+  tip.hidden = true;
+  container.appendChild(tip);
+
+  return {
+    show(event, name, sub) {
+      tip.textContent = "";
+      const n = document.createElement("span");
+      n.className = "viz-tip-name";
+      n.textContent = name;
+      const s = document.createElement("span");
+      s.className = "viz-tip-sub";
+      s.textContent = sub;
+      tip.append(n, s);
+      tip.hidden = false;
+      this.move(event);
+    },
+    move(event) {
+      const r = container.getBoundingClientRect();
+      tip.style.left = `${event.clientX - r.left}px`;
+      tip.style.top = `${event.clientY - r.top}px`;
+    },
+    hide() {
+      tip.hidden = true;
+    }
+  };
 }
 
 match = (selected.length === 0 || compareMode === "smaller")
@@ -255,6 +300,8 @@ readout = {
 }
 ```
 
+#### States by average electricity load
+
 ```{ojs}
 // Only the green fill needs explaining, and the mode label already does that,
 // so the state tones carry no key -- just the data-center dot colors.
@@ -267,48 +314,126 @@ legend = html`<div class="legend">
 ```
 
 ```{ojs}
-chart = {
-  const width = 975;
-  const height = 610;
+mapWidth = 975
+mapHeight = 610
 
-  const projection = d3.geoIdentity().reflectY(true).fitSize([width, height], statesGeo);
-  const path = d3.geoPath(projection);
+// Geometry is pre-projected in R (ESRI:102003 with AK/HI shifted), so this is
+// a fitted identity transform, not a live projection.
+mapProjection = d3.geoIdentity()
+  .reflectY(true)
+  .fitSize([mapWidth, mapHeight], statesGeo)
+```
+
+```{ojs}
+// Built exactly once: it depends only on the geometry, never on the selection.
+// Keeping the same <path> elements across updates is what lets the CSS `fill`
+// transition animate when the tone changes, instead of the map snapping.
+chart = {
+  const container = html`<div class="viz-wrap"></div>`;
+  const tip = makeTooltip(container);
 
   const svg = d3.create("svg")
-      .attr("viewBox", [0, 0, width, height])
+      .attr("viewBox", [0, 0, mapWidth, mapHeight])
       .attr("width", "100%")
       .attr("height", "auto")
       .attr("style", "max-width: 100%; height: auto;");
 
   svg.append("g")
+      .attr("class", "state-layer")
     .selectAll("path")
     .data(statesGeo.features)
     .join("path")
-      .attr("d", path)
-      .attr("class", d => "state-path state-" + stateTone(d.properties.state))
-    .append("title")
-      .text(d => `${d.properties.state_name}: ${(stateAvgGwByAbbr.get(d.properties.state) ?? 0).toFixed(2)} GW avg`);
+      .attr("d", d3.geoPath(mapProjection))
+      .attr("class", "state-path state-unmatched")
+      .on("pointerenter", function (event, d) {
+        // Raise so the hover outline isn't clipped by neighbouring states.
+        d3.select(this).raise().classed("is-hovered", true);
+        const abbr = d.properties.state;
+        tip.show(
+          event,
+          d.properties.state_name,
+          `${(stateAvgGwByAbbr.get(abbr) ?? 0).toFixed(2)} GW average load · #${stateRankByAbbr.get(abbr)} of ${statePower.length}`
+        );
+      })
+      .on("pointermove", event => tip.move(event))
+      .on("pointerleave", function () {
+        d3.select(this).classed("is-hovered", false);
+        tip.hide();
+      });
 
-  const pts = svg.append("g")
-    .selectAll("g")
-    .data(selected)
-    .join("g")
-      .attr("transform", d => `translate(${projection([d.x, d.y])})`);
+  svg.append("g").attr("class", "dc-layer");
 
-  pts.append("circle")
-      .attr("class", "dc-dot")
-      .attr("r", 5)
-      .attr("fill", d => powerSourceColor(d.power_source));
-
-  pts.append("text")
-      .attr("class", "dc-label")
-      .text(d => `${d.name} — ${d.capacity_gw.toFixed(2)} GW`)
-      .attr("x", 8)
-      .attr("y", 4);
-
-  return svg.node();
+  container.appendChild(svg.node());
+  return container;
 }
 ```
+
+```{ojs}
+// Re-tints the existing states and redraws the pins whenever the selection or
+// the mode changes. Returns nothing visible; `chart` above holds the output.
+chartUpdate = {
+  const svg = d3.select(chart).select("svg");
+
+  svg.selectAll(".state-path")
+      .attr("class", d => "state-path state-" + stateTone(d.properties.state));
+
+  // Lay out the pin labels: flip to the left near the right edge, then push
+  // overlapping ones down so several selected centers stay readable.
+  const pins = selected
+    .map(d => {
+      const [x, y] = mapProjection([d.x, d.y]);
+      return { d, x, y, text: `${d.name} — ${d.capacity_gw.toFixed(2)} GW` };
+    })
+    .sort((a, b) => d3.ascending(a.y, b.y));
+
+  const taken = [];
+  for (const p of pins) {
+    p.flip = p.x + p.text.length * 6.2 + 14 > mapWidth;
+    let ly = p.y;
+    while (taken.some(t => Math.abs(t - ly) < 13)) ly += 13;
+    p.ly = ly;
+    taken.push(ly);
+  }
+
+  const pin = svg.select(".dc-layer")
+    .selectAll("g.dc-pin")
+    .data(pins, p => p.d.name)
+    .join(enter => {
+      const g = enter.append("g").attr("class", "dc-pin");
+      g.append("line").attr("class", "dc-leader");
+      g.append("circle").attr("class", "dc-dot").attr("r", 5);
+      g.append("text").attr("class", "dc-label");
+      return g;
+    });
+
+  pin.select("circle")
+      .attr("cx", p => p.x)
+      .attr("cy", p => p.y)
+      .attr("fill", p => powerSourceColor(p.d.power_source));
+
+  pin.select("line")
+      .attr("x1", p => p.x)
+      .attr("y1", p => p.y)
+      .attr("x2", p => p.x + (p.flip ? -8 : 8))
+      .attr("y2", p => p.ly)
+      .attr("display", p => Math.abs(p.ly - p.y) > 3 ? null : "none");
+
+  pin.select("text")
+      .attr("x", p => p.x + (p.flip ? -8 : 8))
+      .attr("y", p => p.ly + 4)
+      .attr("text-anchor", p => p.flip ? "end" : "start")
+      .text(p => p.text);
+
+  return html`<span hidden></span>`;
+}
+```
+
+::: {.fig-note}
+Hover any state for its average load and rank. State load is 2024 retail
+electricity sales ÷ 8,760 h (EIA Form EIA-861); data center figures are
+announced capacity, which is not the same as built capacity. Full sources on
+the [About](about.qmd) page.
+:::
 
 #### Every state, sized by average power draw
 
@@ -347,6 +472,9 @@ treemap = {
         .sum(d => d.value)
         .sort((a, b) => d3.descending(a.value, b.value)));
 
+  const container = html`<div class="viz-wrap"></div>`;
+  const tip = makeTooltip(container);
+
   const svg = d3.create("svg")
       .attr("viewBox", [0, 0, width, height])
       .attr("width", "100%")
@@ -356,7 +484,17 @@ treemap = {
   const cell = svg.selectAll("g")
     .data(root.leaves())
     .join("g")
-      .attr("transform", d => `translate(${d.x0},${d.y0})`);
+      .attr("transform", d => `translate(${d.x0},${d.y0})`)
+      .on("pointerenter", function (event, d) {
+        d3.select(this).select("rect").classed("is-hovered", true);
+        tip.show(event, d.data.full, `${d.data.value.toFixed(2)} GW `
+          + (d.data.kind === "dc" ? "announced capacity" : "average draw"));
+      })
+      .on("pointermove", event => tip.move(event))
+      .on("pointerleave", function () {
+        d3.select(this).select("rect").classed("is-hovered", false);
+        tip.hide();
+      });
 
   cell.append("rect")
       .attr("width", d => d.x1 - d.x0)
@@ -365,10 +503,6 @@ treemap = {
         ? "tm-rect tm-dc"
         : "tm-rect tm-" + d.data.tone)
       .attr("fill", d => d.data.kind === "dc" ? powerSourceColor(d.data.power_source) : null);
-
-  cell.append("title")
-      .text(d => `${d.data.full}: ${d.data.value.toFixed(2)} GW`
-        + (d.data.kind === "dc" ? " (data center capacity)" : " average draw"));
 
   // Only label rectangles with room for the text.
   const fits = (d, w, h) => (d.x1 - d.x0) > w && (d.y1 - d.y0) > h;
@@ -381,7 +515,7 @@ treemap = {
       .attr("x", 4)
       .attr("y", 13)
       .text(d => d.data.kind === "dc"
-        ? (fits(d, 90, 14) ? d.data.label : "\u25CF")
+        ? (fits(d, 90, 14) ? d.data.label : "●")
         : d.data.label);
 
   cell.filter(d => fits(d, 40, 30))
@@ -392,7 +526,8 @@ treemap = {
       .attr("y", 26)
       .text(d => `${d.data.value.toFixed(1)} GW`);
 
-  return svg.node();
+  container.appendChild(svg.node());
+  return container;
 }
 ```
 

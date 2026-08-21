@@ -7,13 +7,25 @@ project:
 website:
   title: "Data Centers vs. States"
   description: "How much power do AI data centers really use? See it next to the states."
+  site-url: https://jhelvy.github.io/datacenter-states
+  favicon: favicon.svg
+  open-graph: true
+  twitter-card:
+    card-style: summary_large_image
+  image: og-card.png
   search: true
   navbar:
+    # The page's own H1 already says "Data Centers vs. States"; repeating it in
+    # the navbar is redundant, so the brand is dropped and the two pages carry
+    # icons instead.
+    title: false
     left:
       - href: index.qmd
         text: Map
+        icon: map
       - href: about.qmd
         text: About
+        icon: info-circle
     tools:
       - icon: github
         href: https://github.com/jhelvy/datacenter-states
@@ -26,6 +38,11 @@ format:
     toc: false
     grid:
       body-width: 1000px
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Raleway:wght@500;600;700&display=swap">
 
 execute:
   echo: false

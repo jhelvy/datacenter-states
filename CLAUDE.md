@@ -35,7 +35,15 @@ data/raw/*.csv  ──R/*.R──►  data/processed/*  ──Quarto+OJS──�
 - `data/processed/` is **committed to git**. The pages read it at runtime; CI
   never runs R. Regenerate and commit it whenever the raw data changes.
 - `index.qmd` is the whole app. `about.qmd` is prose. `styles.css` carries the
-  entire visual system, including the dashboard grid and every SVG fill.
+  entire visual system, including the dashboard grid and every SVG fill. Its
+  `--dcs-*` custom properties at the top are the design tokens; everything else
+  reads from those or from Bootstrap's `--bs-*` variables.
+- Fonts are Raleway (display: headings, KPI numbers) and Inter (body/UI), pulled
+  from Google Fonts by the `include-in-header` block in `_quarto.yml`. Raleway is
+  deliberately kept off small UI text, where it is hard to read.
+- `og-card.png` (the social share image) and `favicon.svg` live at the repo root.
+  `Rscript R/og_card.R` regenerates the card; it is a standalone script, not part
+  of `build_data.R`, and the PNG is committed.
 
 ## Working in index.qmd
 
@@ -59,7 +67,18 @@ Every code cell is `{ojs}`. There are no R chunks in any `.qmd`.
   than the selection); `smallest` and `closest` are subset-sum strategies that
   populate `match` / `matchedStateSet`. The subset-sum DP is skipped entirely in
   `smaller` mode.
+- **`chart` and `chartUpdate` are split on purpose.** `chart` depends only on the
+  geometry and is built exactly once; `chartUpdate` re-tints the same `<path>`
+  elements and redraws the pins on every selection/mode change. Reuniting them
+  would rebuild the SVG each time, and the `transition: fill` in `styles.css`
+  only animates when the elements survive. `chartUpdate` returns a hidden span
+  because a cell's value is its output slot — `chart` holds the real one.
+- `makeTooltip(container)` is the shared hover tooltip for the map and the
+  treemap. Do not go back to SVG `<title>`: it is delayed ~1s and unstyleable.
 - `d3` and `Inputs` come from Quarto's OJS stdlib — no `require` or import.
+- Quarto emits one output div per top-level statement in an `{ojs}` block, but
+  only DOM-valued cells render anything visible, so plain values and function
+  declarations can sit anywhere without leaving inspector junk on the page.
 
 ### Verifying front-end changes without a browser
 
