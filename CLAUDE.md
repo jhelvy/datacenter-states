@@ -41,6 +41,15 @@ data/raw/*.csv  ──R/*.R──►  data/processed/*  ──Quarto+OJS──�
 - Fonts are Raleway (display: headings, KPI numbers) and Inter (body/UI), pulled
   from Google Fonts by the `include-in-header` block in `_quarto.yml`. Raleway is
   deliberately kept off small UI text, where it is hard to read.
+- The navbar carries no brand title (the page H1 already says it), runs on the
+  dark ink `#12303f` with `foreground: light`, and uses the filled Bootstrap
+  icons. Its active/hover accent is overridden in `styles.css` to the map green,
+  because cosmo's default blue belongs to no other element on the site.
+- **Dark mode was considered and deliberately skipped.** Adding it means
+  reworking the map and treemap palettes for a dark ground — the green/grey
+  two-tone and the white-on-fill treemap labels do not survive the flip. The
+  `--bs-*` variables are used throughout anyway, so the chrome would follow, but
+  do not switch it on without redoing the SVG fills.
 - `og-card.png` (the social share image) and `favicon.svg` live at the repo root.
   `Rscript R/og_card.R` regenerates the card; it is a standalone script, not part
   of `build_data.R`, and the PNG is committed.
@@ -76,11 +85,14 @@ Every code cell is `{ojs}`. There are no R chunks in any `.qmd`.
 - `makeTooltip(container)` is the shared hover tooltip for the map and the
   treemap. Do not go back to SVG `<title>`: it is delayed ~1s and unstyleable.
 - The sidebar is two `.panel` boxes inside `.dash-side`: `.panel-mode` (the
-  question) and `.panel-dc` (the inputs). Both option lists share the `.opt-list`
+  question) and `.panel-dc` (the inputs). They share one background; only
+  `.panel-mode`'s green border sets them apart, and `.panel-dc` is currently a
+  markup hook with no rules of its own. Both option lists share the `.opt-list`
   row styling and the `.opt` / `.opt-name` / `.opt-meta` two-line markup, fed by
   the `format:` callback of `Inputs.radio` / `Inputs.checkbox`. `.dc-list` adds
   only the scroll cap. Keep the two lists visually identical — that parallel is
-  the point.
+  the point, and `compareModeOptions` in `index.qmd` supplies the mode rows'
+  name/sub pairs.
 - Nesting means the Quarto fences are deep: `.dash` is `::::::`, `.dash-side` and
   `.dash-main` are `:::::`, `.panel` is `::::`, `.opt-list` is `:::`. A child
   fence must be shorter than its parent, so adding a level means widening the
